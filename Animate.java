@@ -1,5 +1,5 @@
 /**************************************************
-*  
+*   Author: Morrison
 *   Date:  03 Nov 202020
 **************************************************/
 
@@ -29,9 +29,6 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.io.ObjectInputStream;
 import java.io.FileInputStream;
-import javafx.animation.*;
-import javafx.util.Duration;
-import javafx.beans.property.*;
 
 public class Animate extends Application
 {
@@ -73,34 +70,23 @@ public class Animate extends Application
         GridPane gp = new GridPane();
         
         Button saveButton = new Button("Save Drawing");
-        Button addButton = new Button("Add Drawing");
+        Button clearButton = new Button("Clear Drawing");
         Button playButton = new Button("Play");
         bp.setBottom(gp);
         gp.add(animationBar, 3,0);
-        gp.add(addButton, 0, 0);
+        gp.add(clearButton, 0, 0);
         gp.add(playButton, 1, 0);
         gp.add(saveButton, 2, 0);
         saveButton.setOnAction( e ->
         {
             drawings.add(copyDrawing(currentDrawing));
-            animationBar.add(new DrawButton(drawings.get(drawings.size() - 1), "" + drawings.size()),drawings.size() - 1,0);
+            animationBar.add(new DrawButton(drawings.get(drawings.size() - 1), bgColor, "" + drawings.size()),drawings.size() - 1,0);
             //refreshAnimationBar();
         });
-        playButton.setOnAction( e ->
-        {
-            final int totalFrames = animationBar.getChildren().size() - 1; //this is so you can repeat the animation loop indefinitely
-            final IntegerProperty frame = new SimpleIntegerProperty(0);
-            Timeline timeline = new Timeline(
-                new KeyFrame(
-                    Duration.millis(42),
-                    event -> {
-                        ((DrawButton) animationBar.getChildren().get(frame.get() % totalFrames)).fire();
-                        frame.set(frame.get() + 1);
-                    }
-                )
-            );
-            timeline.setCycleCount(Animation.INDEFINITE);        
-            timeline.play();
+        clearButton.setOnAction(e ->{
+            pen.setFill(bgColor);
+            pen.fillRect(0,0,canvas.getWidth(),canvas.getHeight());
+            currentDrawing.clear();
         });
         canvas.setOnMousePressed( e ->
         {
@@ -131,10 +117,20 @@ public class Animate extends Application
         MenuItem quitItem = new MenuItem("Quit");
         MenuItem saveItem = new MenuItem("Save");
         MenuItem openItem = new MenuItem("Open...");
+        MenuItem clearItem = new MenuItem("Clear All");
         openItem.setOnAction(e -> deserialize());
         saveItem.setOnAction(e -> serialize());
         quitItem.setOnAction(e -> Platform.exit());
-        fileMenu.getItems().addAll(quitItem, saveItem, openItem);
+        clearItem.setOnAction(e ->{    
+            for (ArrayList<Curve> r : drawings) {
+                r.clear();
+            }
+            animationBar.getChildren().clear();
+            drawings.clear();
+            pen.setFill(Color.WHITE);
+            pen.fillRect(0,0,canvas.getWidth(),canvas.getHeight());
+        });
+        fileMenu.getItems().addAll(quitItem, saveItem, openItem,clearItem);
 
         Menu colorMenu = new Menu("Color");
         colorMenu.getItems().addAll(
@@ -231,15 +227,15 @@ public class Animate extends Application
         }
     }
 
-    public void refreshAnimationBar()
-    {
-        animationBar.getChildren().clear();
-        for (int i = 0; i < drawings.size(); i++)
-        {
-            ArrayList<Curve> drawing = drawings.get(i);
-            animationBar.getChildren().add(new DrawButton(drawing, "" + i));
-        }
-    }
+    // public void refreshAnimationBar()
+    // {
+    //     animationBar.getChildren().clear();
+    //     for (int i = 0; i < drawings.size(); i++)
+    //     {
+    //         ArrayList<Curve> drawing = drawings.get(i);
+    //         animationBar.getChildren().add(new DrawButton(drawing, "" + i));
+    //     }
+    // }
     public ArrayList<Curve> copyDrawing(ArrayList<Curve> original)
     {
         ArrayList<Curve> copy = new ArrayList<Curve>();
@@ -301,10 +297,12 @@ public class Animate extends Application
     class DrawButton extends Button
     {
         private final ArrayList<Curve> drawing;
-        public DrawButton(ArrayList<Curve> drawing, String name)
+        final Color bgColor;
+        public DrawButton(ArrayList<Curve> drawing, Color bgColor, String name)
         {
             super(name);
             this.drawing = copyDrawing(drawing);
+            this.bgColor = bgColor;
             System.out.printf("Generated drawing %s that had %s curves\n", name, drawing.size());
             setOnAction(e ->
             {
@@ -312,10 +310,6 @@ public class Animate extends Application
                 System.out.printf("Used drawing %s that had %s curves\n", name, drawing.size());
                 refresh();
             });
-        }
-        public ArrayList<Curve> getDrawing()
-        {
-            return drawing;
         } 
     }
     class ColorMenuItem extends MenuItem
